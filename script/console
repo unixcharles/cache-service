@@ -1,5 +1,0 @@
-#!/usr/bin/env ruby
-
-params =  " -r irb/completion"
-params <<  " -r #{File.dirname(__FILE__) + '/../lib/cache_service.rb'}"
-exec "irb #{params} --simple-prompt"

@@ -1,9 +1,14 @@
 module CacheService
   module Proxy
     module InstanceMethods
-      def cache_collection(*arguments, &block)
-        @cache_collection ||= Services::Collection.new(cache_service_configuration)
-        @cache_collection.call(block, *arguments)
+      def cache_aggregator(*arguments, &block)
+        aggregator = Aggregator.new(cache_service_configuration.dup, arguments, block)
+        aggregator.call
+      end
+
+      def cache_expiration(*objects, &block)
+        expiration = Expiration.new(cache_service_configuration.dup, objects.flatten, block)
+        expiration.call
       end
 
       protected

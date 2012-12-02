@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+
+lib_path = "#{File.dirname(__FILE__)}/../lib"
+$:.unshift(lib_path)
+
+require 'rubygems'
+require 'bundler'
+Bundler.setup
+
+require 'cache_service'
+require 'pry'
+
+Pry.start

@@ -7,12 +7,34 @@ def clear_cache!
   $redis.keys('cache-service-test-*').each { |key| $redis.del(key) }
 end
 
+def clear_cache_objects!(range = nil)
+  keys = $redis.keys('cache-service-test-posts/object/*')
+  if range
+    keys[range]
+  else
+    keys
+  end.each { |key| $redis.del(key) }
+end
+
+def clear_cache_collection!
+  $redis.keys('cache-service-test-posts/collection/*').each { |key| $redis.del(key) }
+end
+
 def load_cache!(*arguments)
   arguments.each do |hash|
     hash.each do |k, v|
       $redis.set(k, Marshal.dump(v))
     end
   end
+end
+
+CacheService.configure do |config|
+  config.redis = $redis
+  config.serialize_references   { |object| Marshal.dump(object) }
+  config.deserialize_references { |string| Marshal.load(string) }
+  config.serialize_object       { |object| Marshal.dump(object) }
+  config.deserialize_object     { |string| Marshal.load(string) }
+  config.uniq_id                { |object| object[:id] }
 end
 
 class PostsController
@@ -26,57 +48,28 @@ class PostsController
 
   # Class level configuration
   cache_service do |config|
-    config.redis = $redis
-
-    config.dump { |object| Marshal.dump(object) }
-    config.load { |string| Marshal.load(string) }
-
-    config.uniq_id { |object| object[:id] }
     config.prefix = 'cache-service-test-posts'
     config.object_key { |post| "#{post[:id]}:#{post[:updated_at].to_i}" }
   end
 
 
-  def index(page = 1)
-    Thread.current[:query_from_cache] = true
-    Thread.current[:objects_from_cache] = true
-
-    cache_collection(:page => page) do |cache|
+  def index(blog_id = 1, page = 1)
+    cache_aggregator(:blog => blog_id) do |cache|
+      cache.params(:page => page)
       cache.query do
-        Thread.current[:query_from_cache] = false
         page =  page - 1
-        COLLECTION_QUERY.map { |item| item.select {|key| [:id, :updated_at].include? key } }[(page*3)..(page*3)+3].to_a
+        COLLECTION_QUERY.map do |item|
+          item.select {|key| [:id, :updated_at].include? key }
+        end[(page*3)..(page*3)+3].to_a
       end
 
-      cache.listen(:post_collection)
-      cache.listen(:blog => 1)
-
       cache.resolve do |ids|
-        Thread.current[:objects_from_cache] = false
         COLLECTION_QUERY.select { |item| ids.include?(item[:id]) }
       end
     end
   end
 
-  def show(id = 1)
-      $query_from_cache, $object_from_cache = true, true
-
-    cache_object(:id => id) do |cache|
-      cache.query do
-        $objects_from_cache = false
-
-        COLLECTION_QUERY.map { |item|
-          item.select {|key| [:id, :updated_at].include? key }
-        }.detect {|object| object[:id] == id }
-      end
-
-      cache.listen(:post_id => id)
-      cache.listen(:comments, :post_id => id)
-
-      cache.resolve do |id|
-        $object_from_cache = false
-        COLLECTION_QUERY.detect {|object| object[:id] == id }
-      end
-    end
+  def update(post_id = 1, blog_id = 1)
+    cache_expiration COLLECTION_QUERY.select {|object| object[:id] == post_id }
   end
 end

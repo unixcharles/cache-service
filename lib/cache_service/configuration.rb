@@ -1,7 +1,13 @@
 module CacheService
   class Configuration
+
     def initialize
       @configuration = {}
+    end
+
+    def initialize_copy(*arguments)
+      @configuration = @configuration.dup
+      super
     end
 
     protected
