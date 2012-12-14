@@ -20,14 +20,6 @@ def clear_cache_collection!
   $redis.keys('cache-service-test-posts/collection/*').each { |key| $redis.del(key) }
 end
 
-def load_cache!(*arguments)
-  arguments.each do |hash|
-    hash.each do |k, v|
-      $redis.set(k, Marshal.dump(v))
-    end
-  end
-end
-
 CacheService.configure do |config|
   config.redis = $redis
   config.serialize_references   { |object| Marshal.dump(object) }
@@ -54,7 +46,7 @@ class PostsController
 
 
   def index(blog_id = 1, page = 1)
-    cache_aggregator(:blog => blog_id) do |cache|
+    cache_aggregator(:published, :blog => blog_id) do |cache|
       cache.params(:page => page)
       cache.query do
         page =  page - 1
