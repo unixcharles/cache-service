@@ -92,7 +92,7 @@ describe CacheService do
 
   it 'subscribe the object to the collection' do
     clear_cache! && posts_controller.index
-    collection_key = "cache-service-test-posts/collection/blog:1"
+    collection_key = "cache-service-test-posts/collection/published/blog:1"
 
     subscriptions_keys = $redis.keys('cache-service-test-posts/object-subscriptions/*')
     expect( subscriptions_keys.size ).to eql(3)
@@ -105,7 +105,7 @@ describe CacheService do
 
   it 'delete expire object and referenced collection' do
     clear_cache! && posts_controller.index
-    collection_key = "cache-service-test-posts/collection/blog:1"
+    collection_key = "cache-service-test-posts/collection/published/blog:1"
 
     deleted_keys = posts_controller.update
     subscriptions_keys = $redis.keys('cache-service-test-posts/object-subscriptions/*')
